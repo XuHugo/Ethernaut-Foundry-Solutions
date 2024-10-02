@@ -8,7 +8,7 @@
 </div>
 <br>
 
-详细解读文章: [Ethernaut Solutions | Level 2 - Fallout](https://blog.csdn.net/xq723310/)
+详细解读文章: [Ethernaut Foundry Solutions | Level 2 - Fallout](https://blog.csdn.net/xq723310/)
 
 ## 目录
 
@@ -20,6 +20,7 @@
 
 ## 目标
 
+要求得到合约的所有权
 <img src="../imgs/requirements/2-fallout-requirements.webp" width="800px"/>
 
 ## 漏洞

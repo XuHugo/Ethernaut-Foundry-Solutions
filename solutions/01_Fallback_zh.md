@@ -8,7 +8,7 @@
 </div>
 <br>
 
-详细解读文章: [Ethernaut Solutions | Level 1 - Fallback](https://blog.csdn.net/xq723310/)
+详细解读文章: [Ethernaut Foundry Solutions | Level 1 - Fallback](https://blog.csdn.net/xq723310/)
 
 ## 目录
 

@@ -1,5 +1,5 @@
 <div align="center">
-<p align="left">(<a href="https://github.com/XuHugo/Ethernaut-Foundry-Solutions">back</a>)</p>
+<p align="left">(<a href="https://github.com/XuHugo/Ethernaut-Foundry-Solutions/tree/main/solutions">back</a>)</p>
 
 <img src="../imgs/levels/1-fallback.webp" width="600px"/>
 <br><br>
@@ -8,7 +8,7 @@
 </div>
 <br>
 
-文章: [Ethernaut Solutions | Level 1 - Fallback](https://blog.csdn.net/xq723310/)
+详细解读文章: [Ethernaut Solutions | Level 1 - Fallback](https://blog.csdn.net/xq723310/)
 
 ## 目录
 

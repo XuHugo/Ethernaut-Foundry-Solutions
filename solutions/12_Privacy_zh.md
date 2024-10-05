@@ -84,8 +84,8 @@ Done.
 
 ## 要点
 
-- Again, nothing is private on-chain. Everything is public and can be read by anyone.
-- Organize your storage to save space and gas.
+- 同样，链上是没有隐私。一切都是公开的，任何人都可以阅读。
+- 合理安排你的存储空间，可以节省gas。
 
 ## 参考
 

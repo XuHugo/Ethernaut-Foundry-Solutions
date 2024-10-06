@@ -33,7 +33,7 @@
 
 ### Modifier1
 
-这里没有什么难的的，我们在之前的Telephone关卡中遇到过。我们只需要从合约中调用`enter()`函数，那么`tx.origin`将是我们自己的账户。`msg.sender`则是合同。
+这里没有什么难的的，我们在之前的Telephone关卡中遇到过。我们只需要从合约中调用`enter()`函数，那么`tx.origin`将是我们自己的账户。`msg.sender`则是合约。
 
 ```javascript
  modifier gateOne() {

@@ -63,7 +63,7 @@ forge test --match-contract FallbackTest -vvvvv
 - [x] [Lvl 22 Dex](./solutions/22_Dex_zh.md)
 - [x] [Lvl 23 Dex Two](./solutions/23_DexTwo_zh.md)
 - [x] [Lvl 24 Puzzle Wallet](./solutions/24_PuzzleWallet_zh.md)
-- [ ] [Lvl 25 Motorbike](./solutions/25_Motorbike_zh.md) 
+- [x] [Lvl 25 Motorbike](./solutions/25_Motorbike_zh.md) 
 - [x] [Lvl 26 Double Entry Point](./solutions/26_DoubleEntryPoint_zh.md)
 - [x] [Lvl 27 Good Samaritan](./solutions/27_GoodSamaritan_zh.md)
 - [x] [Lvl 28 Gate Keeper 3](./solutions/28_GateKeeperThree_zh.md)

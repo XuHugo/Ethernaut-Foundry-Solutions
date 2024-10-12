@@ -4,54 +4,59 @@ pragma solidity ^0.8.0;
 import "forge-std/Test.sol";
 import "src/18_MagicNumber.sol";
 
+interface Solver {
+    function whatIsTheMeaningOfLife() external view returns (bytes32);
+}
+
 contract MagicNumberTest is Test {
-    MagicNumber instance;
+    MagicNum instance;
     Attack attack;
-    address payable player1;
+    address player1;
     address player2;
 
     function setUp() public {
-        player1 = payable(vm.addr(1));
+        player1 = vm.addr(1);
 
-        player2 = vm.addr(2);
-        vm.deal(player2, 0.001 ether);
-        vm.startPrank(player2, player2);
         attack = new Attack();
-        instance = new MagicNumber();
-        instance.generateToken{value: 0.001 ether}("xq", 100000000);
-        vm.stopPrank();
+        instance = new MagicNum();
     }
 
     function testattacker() public {
-        vm.startPrank(player1, player1);
-
-        address payable lostContract = payable(
-            attack.attack(address(instance))
+        address solver = attack.attack1();
+        instance.setSolver(solver);
+        assertEq(
+            Solver(solver).whatIsTheMeaningOfLife(),
+            0x000000000000000000000000000000000000000000000000000000000000002a
         );
-        assertEq(address(lostContract).balance, 0.001 ether);
-        SimpleToken(lostContract).destroy(player1);
-        assertEq(address(lostContract).balance, 0);
-        vm.stopPrank();
+        uint256 size;
+        assembly {
+            size := extcodesize(solver)
+        }
+        assertEq(size, 10);
     }
 }
 
-contract Attack {
-    function attack(address eoa) public returns (address) {
-        address lostContract = address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xd6),
-                            bytes1(0x94),
-                            eoa,
-                            bytes1(0x01)
-                        )
-                    )
-                )
-            )
-        );
+contract Attack is Test {
+    function attack1() public returns (address) {
+        address solver;
+        bytes
+            memory bytecode = hex"600a600c600039600a6000f3602a60805260206080f3";
+        //uint len;
+        assembly {
+            //len := mload(bytecode)
+            solver := create(0, add(bytecode, 0x20), mload(bytecode)) //add(bytecode, 0x20)
+        }
+        //console.log(">>>>>>>>>>>>>>>>gas:", len); //22
+        return solver;
+    }
 
-        return lostContract;
+    function attack2() public returns (address) {
+        address solver;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, shl(0x68, 0x69602A60005260206000F3600052600A6016F3))
+            solver := create(0, ptr, 0x13)
+        }
+        return solver;
     }
 }

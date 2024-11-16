@@ -21,7 +21,7 @@
 
 ## 目标
 
-拿到合约的所有权
+拿到合约的所有权  
 <img src="../imgs/requirements/19-alien-requirements.webp" width="800px"/>
 
 ## 漏洞

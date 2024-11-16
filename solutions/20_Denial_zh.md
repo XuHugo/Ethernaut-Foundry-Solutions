@@ -20,7 +20,7 @@
 
 ## 目标
 
-目的是要阻止 owner 在 withdraw 的时候提取资产
+目的是要阻止 owner 在 withdraw 的时候提取资产  
 <img src="../imgs/requirements/20-denial-requirements.webp" width="800px"/>
 
 ## 漏洞

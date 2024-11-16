@@ -56,7 +56,7 @@ interface IShop {
     function buy() external;
 }
 
-contract Discount {
+contract Attack {
     IShop shop;
 
     constructor(address _shop) {
@@ -82,7 +82,7 @@ forge test --match-contract  ShopTest  -vvvvv
 
 ## 要点
 
-- Don't change the state based on external and untrusted contracts logic.
+- 不要依赖外部合约，改变合约状态的.
 
 <div align="center">
 <br>

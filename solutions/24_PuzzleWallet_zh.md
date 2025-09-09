@@ -170,8 +170,8 @@ forge test --match-contract  PuzzleWalletTest  -vvvvv
 
 ## 要点
 
-- Always double check you storage layout to prevent any collision.
-- Make sure critical logic is protected with an access control mechanism.
+- 使用`delegatecall`时，一定要注意存储冲突的问题.
+- 关键逻辑要注意使用权限保护.
 
 <div align="center">
 <br>
